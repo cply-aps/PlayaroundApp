@@ -3,73 +3,62 @@ import SwiftUI
 struct AdminDashboardView: View {
     @EnvironmentObject var userManager: UserManager
     @State private var showingCreateUserSheet = false
-    @State private var sortOption: SortOption = .name
+    @State private var selectedFilter: UserFilter = .all
+    @State private var searchText = ""
+    @State private var isSearching = false
     
-    enum SortOption {
-        case name, type
+    enum UserFilter {
+        case all, admin, therapist, patient
     }
     
-    var sortedUsers: [User] {
-        switch sortOption {
-        case .name:
-            return userManager.users.sorted { $0.username < $1.username }
-        case .type:
-            return userManager.users.sorted { $0.userType.rawValue < $1.userType.rawValue }
+    var filteredUsers: [User] {
+        let sortedUsers = userManager.users.sorted { $0.username.lowercased() < $1.username.lowercased() }
+        
+        let typeFilteredUsers = filterUsersByType(sortedUsers)
+        
+        if searchText.isEmpty {
+            return typeFilteredUsers
+        }
+        
+        return typeFilteredUsers.filter {
+            $0.username.lowercased().contains(searchText.lowercased())
+        }
+    }
+    
+    private func filterUsersByType(_ users: [User]) -> [User] {
+        switch selectedFilter {
+        case .all:
+            return users
+        case .admin:
+            return users.filter { $0.userType == .admin }
+        case .therapist:
+            return users.filter { $0.userType == .therapist }
+        case .patient:
+            return users.filter { $0.userType == .patient }
         }
     }
     
     var body: some View {
         List {
             Section {
-                Picker("Sort by", selection: $sortOption) {
-                    Text("Name").tag(SortOption.name)
-                    Text("Type").tag(SortOption.type)
+                Picker("Filter by", selection: $selectedFilter) {
+                    Text("All Users").tag(UserFilter.all)
+                    Text("Admins").tag(UserFilter.admin)
+                    Text("Therapists").tag(UserFilter.therapist)
+                    Text("Patients").tag(UserFilter.patient)
                 }
                 .pickerStyle(.segmented)
             }
             
-            ForEach(sortedUsers) { user in
-                NavigationLink(destination: UserDetailView(user: user)) {
-                    HStack {
-                        Text(user.username)
-                        Spacer()
-                        Text(user.userType.rawValue.capitalized)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                    Button(role: .destructive) {
-                        if let index = userManager.users.firstIndex(where: { $0.id == user.id }) {
-                            userManager.deleteUser(at: index)
-                        }
-                    } label: {
-                        Label("Delete", systemImage: "trash")
-                    }
-                    .tint(.red)
-                }
-                .confirmationDialog(
-                    "Are you sure you want to delete this user?",
-                    isPresented: Binding(
-                        get: { userManager.userToDelete?.id == user.id },
-                        set: { if !$0 { userManager.userToDelete = nil } }
-                    ),
-                    titleVisibility: .visible
-                ) {
-                    Button("Delete", role: .destructive) {
-                        if let userToDelete = userManager.userToDelete,
-                           let index = userManager.users.firstIndex(where: { $0.id == userToDelete.id }) {
-                            userManager.deleteUser(at: index)
-                        }
-                    }
-                    Button("Cancel", role: .cancel) {
-                        userManager.userToDelete = nil
-                    }
-                } message: {
-                    Text("This action cannot be undone.")
-                }
+            ForEach(filteredUsers) { user in
+                UserRowView(user: user)
             }
         }
         .navigationTitle("Users")
+        .refreshable {
+            isSearching = true
+        }
+        .searchable(text: $searchText, isPresented: $isSearching, prompt: "Search users")
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: { showingCreateUserSheet = true }) {
@@ -79,6 +68,52 @@ struct AdminDashboardView: View {
         }
         .sheet(isPresented: $showingCreateUserSheet) {
             CreateUserView()
+        }
+    }
+}
+
+struct UserRowView: View {
+    @EnvironmentObject var userManager: UserManager
+    let user: User
+    
+    var body: some View {
+        NavigationLink(destination: UserDetailView(user: user)) {
+            HStack {
+                Text(user.username)
+                Spacer()
+                Text(user.userType.rawValue.capitalized)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button(role: .destructive) {
+                if let index = userManager.users.firstIndex(where: { $0.id == user.id }) {
+                    userManager.deleteUser(at: index)
+                }
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+            .tint(.red)
+        }
+        .confirmationDialog(
+            "Are you sure you want to delete this user?",
+            isPresented: Binding(
+                get: { userManager.userToDelete?.id == user.id },
+                set: { if !$0 { userManager.userToDelete = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                if let userToDelete = userManager.userToDelete,
+                   let index = userManager.users.firstIndex(where: { $0.id == userToDelete.id }) {
+                    userManager.deleteUser(at: index)
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                userManager.userToDelete = nil
+            }
+        } message: {
+            Text("This action cannot be undone.")
         }
     }
 }

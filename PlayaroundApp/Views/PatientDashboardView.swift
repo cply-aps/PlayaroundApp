@@ -12,10 +12,22 @@ struct PatientDashboardView: View {
                 }
             }
             
-            // Placeholder for entries list
             Section(header: Text("Recent Entries")) {
-                Text("No entries yet")
-                    .foregroundColor(.secondary)
+                if userManager.getEntriesForCurrentUser().isEmpty {
+                    Text("No entries yet")
+                        .foregroundColor(.secondary)
+                } else {
+                    ForEach(userManager.getEntriesForCurrentUser()) { entry in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(entry.activity)
+                                .font(.headline)
+                            Text(entry.startTime, style: .date)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
             }
         }
         .navigationTitle("My Journal")
@@ -135,7 +147,24 @@ struct NewEntryView: View {
     }
     
     private func saveEntry() {
-        // TODO: Implement entry saving
+        guard let currentUser = userManager.currentUser else { return }
+        
+        let entry = Entry(
+            userId: currentUser.id,
+            startTime: startTime,
+            activity: activity,
+            experience: experience,
+            mood: mood,
+            condition: condition,
+            stress: stress.map { Int($0) },
+            control: control.map { Int($0) },
+            challenge: challenge,
+            energy: energy.map { Int($0) },
+            pain: pain.map { Int($0) },
+            comments: comments.isEmpty ? nil : comments
+        )
+        
+        userManager.saveEntry(entry: entry)
         dismiss()
     }
 }

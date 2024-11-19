@@ -5,12 +5,13 @@ class UserManager: ObservableObject {
     @Published var currentUser: User?
     @Published var users: [User] = []
     @Published var userToDelete: User?
+    @Published var entries: [Entry] = []
     
     init() {
         // Create default admin user
         let adminUser = User(
             username: "Admin",
-            password: "Password", // In production, use proper password hashing
+            password: "Password",
             userType: .admin
         )
         users.append(adminUser)
@@ -62,5 +63,15 @@ class UserManager: ObservableObject {
         
         users.remove(at: index)
         userToDelete = nil
+    }
+    
+    func saveEntry(entry: Entry) {
+        entries.append(entry)
+    }
+    
+    func getEntriesForCurrentUser() -> [Entry] {
+        guard let currentUser = currentUser else { return [] }
+        return entries.filter { $0.userId == currentUser.id }
+            .sorted { $0.startTime > $1.startTime } // Sort newest first
     }
 } 
