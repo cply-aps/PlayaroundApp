@@ -1,17 +1,14 @@
 import Foundation
+import SwiftData
 
-enum UserType: String, Codable {
-    case admin
-    case therapist
-    case patient
-}
-
-struct User: Identifiable, Codable {
-    let id: UUID
+@Model
+final class User {
+    var id: UUID
     var username: String
-    var password: String // Note: In production, implement proper password hashing
+    var password: String
     var userType: UserType
     var requiredEntryFields: Set<EntryField>
+    @Relationship(deleteRule: .cascade) var entries: [Entry] = []
     
     init(id: UUID = UUID(), username: String, password: String, userType: UserType, 
          requiredEntryFields: Set<EntryField> = [.startTime, .activity, .experience, .comments]) {
@@ -23,7 +20,13 @@ struct User: Identifiable, Codable {
     }
 }
 
-enum EntryField: String, Codable, CaseIterable {
+enum UserType: String, Codable, Hashable {
+    case admin
+    case therapist
+    case patient
+}
+
+enum EntryField: String, Codable, Hashable, CaseIterable {
     case startTime = "Start Time"
     case activity = "Activity"
     case experience = "Experience"

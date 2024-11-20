@@ -123,6 +123,7 @@ struct NewEntryView: View {
                                 currentStep -= 1
                             }
                         }
+                        .buttonStyle(.bordered)
                     }
                     
                     Spacer()
@@ -133,10 +134,12 @@ struct NewEntryView: View {
                                 currentStep += 1
                             }
                         }
+                        .buttonStyle(.borderedProminent)
                     } else {
                         Button("Save") {
                             saveEntry()
                         }
+                        .buttonStyle(.borderedProminent)
                     }
                 }
                 .padding()
@@ -150,7 +153,7 @@ struct NewEntryView: View {
         guard let currentUser = userManager.currentUser else { return }
         
         let entry = Entry(
-            userId: currentUser.id,
+            user: currentUser,
             startTime: startTime,
             activity: activity,
             experience: experience,

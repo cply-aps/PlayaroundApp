@@ -6,9 +6,15 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct ContentView: View {
-    @StateObject private var userManager = UserManager()
+    @Environment(\.modelContext) private var modelContext
+    @StateObject private var userManager: UserManager
+    
+    init(modelContext: ModelContext) {
+        _userManager = StateObject(wrappedValue: UserManager(modelContext: modelContext))
+    }
     
     var body: some View {
         Group {
@@ -75,5 +81,12 @@ struct LoginView: View {
 }
 
 #Preview {
-    ContentView()
+    do {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: User.self, Entry.self, configurations: config)
+        
+        return ContentView(modelContext: container.mainContext)
+    } catch {
+        return Text("Failed to create preview")
+    }
 }

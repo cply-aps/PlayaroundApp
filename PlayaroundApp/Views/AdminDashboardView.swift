@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 struct AdminDashboardView: View {
     @EnvironmentObject var userManager: UserManager
@@ -75,6 +76,7 @@ struct AdminDashboardView: View {
 struct UserRowView: View {
     @EnvironmentObject var userManager: UserManager
     let user: User
+    @State private var showDeleteConfirmation = false
     
     var body: some View {
         NavigationLink(destination: UserDetailView(user: user)) {
@@ -87,33 +89,58 @@ struct UserRowView: View {
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button(role: .destructive) {
-                if let index = userManager.users.firstIndex(where: { $0.id == user.id }) {
-                    userManager.deleteUser(at: index)
-                }
+                showDeleteConfirmation = true
             } label: {
                 Label("Delete", systemImage: "trash")
             }
             .tint(.red)
         }
-        .confirmationDialog(
-            "Are you sure you want to delete this user?",
-            isPresented: Binding(
-                get: { userManager.userToDelete?.id == user.id },
-                set: { if !$0 { userManager.userToDelete = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            Button("Delete", role: .destructive) {
-                if let userToDelete = userManager.userToDelete,
-                   let index = userManager.users.firstIndex(where: { $0.id == userToDelete.id }) {
-                    userManager.deleteUser(at: index)
+        .sheet(isPresented: $showDeleteConfirmation) {
+            DeleteConfirmationView(
+                isPresented: $showDeleteConfirmation,
+                username: user.username
+            ) {
+                userManager.deleteUser(user)
+            }
+        }
+    }
+}
+
+struct DeleteConfirmationView: View {
+    @Binding var isPresented: Bool
+    let username: String
+    let onDelete: () -> Void
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 20) {
+                Text("Are you sure you want to delete \(username)?")
+                    .font(.headline)
+                    .multilineTextAlignment(.center)
+                    .padding()
+                
+                Text("This action cannot be undone.")
+                    .foregroundColor(.secondary)
+                
+                HStack(spacing: 20) {
+                    Button("Cancel") {
+                        isPresented = false
+                    }
+                    .buttonStyle(.bordered)
+                    
+                    Button("Delete") {
+                        onDelete()
+                        isPresented = false
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.red)
                 }
+                .padding(.top)
             }
-            Button("Cancel", role: .cancel) {
-                userManager.userToDelete = nil
-            }
-        } message: {
-            Text("This action cannot be undone.")
+            .padding()
+            .navigationTitle("Delete User")
+            .navigationBarTitleDisplayMode(.inline)
+            .presentationDetents([.height(200)])
         }
     }
 }
@@ -344,12 +371,13 @@ struct EditUserView: View {
         selectedFields.insert(.experience)
         selectedFields.insert(.comments)
         
-        var updatedUser = user
-        updatedUser.username = username
-        updatedUser.requiredEntryFields = selectedFields
-        if isChangingPassword {
-            updatedUser.password = newPassword
-        }
+        let updatedUser = User(
+            id: user.id,
+            username: username,
+            password: isChangingPassword ? newPassword : user.password,
+            userType: user.userType,
+            requiredEntryFields: selectedFields
+        )
         
         if userManager.updateUser(updatedUser) {
             user = updatedUser
@@ -362,8 +390,19 @@ struct EditUserView: View {
 }
 
 #Preview {
-    NavigationView {
-        AdminDashboardView()
-            .environmentObject(UserManager())
+    do {
+        let schema = Schema([
+            User.self,
+            Entry.self
+        ])
+        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: modelConfiguration)
+        
+        return NavigationView {
+            AdminDashboardView()
+                .environmentObject(UserManager(modelContext: container.mainContext))
+        }
+    } catch {
+        return Text("Failed to create preview")
     }
 } 

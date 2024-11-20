@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 struct MainView: View {
     @EnvironmentObject var userManager: UserManager
@@ -38,6 +39,13 @@ struct TherapistDashboardView: View {
 }
 
 #Preview {
-    MainView()
-        .environmentObject(UserManager())
+    do {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: User.self, Entry.self, configurations: config)
+        
+        return MainView()
+            .environmentObject(UserManager(modelContext: container.mainContext))
+    } catch {
+        return Text("Failed to create preview")
+    }
 } 

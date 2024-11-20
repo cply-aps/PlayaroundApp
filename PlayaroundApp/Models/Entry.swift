@@ -1,8 +1,10 @@
 import Foundation
+import SwiftData
 
-struct Entry: Identifiable, Codable {
-    let id: UUID
-    let userId: UUID
+@Model
+final class Entry {
+    var id: UUID
+    @Relationship var user: User?
     var startTime: Date
     var activity: String
     var experience: Experience
@@ -14,14 +16,14 @@ struct Entry: Identifiable, Codable {
     var energy: Int?
     var pain: Int?
     var comments: String?
-    let createdAt: Date
+    var createdAt: Date
     
-    init(id: UUID = UUID(), userId: UUID, startTime: Date = Date(), activity: String = "", 
+    init(id: UUID = UUID(), user: User, startTime: Date = Date(), activity: String = "", 
          experience: Experience = .basic, mood: Mood? = nil, condition: Condition? = nil,
          stress: Int? = nil, control: Int? = nil, challenge: Challenge? = nil,
          energy: Int? = nil, pain: Int? = nil, comments: String? = nil) {
         self.id = id
-        self.userId = userId
+        self.user = user
         self.startTime = startTime
         self.activity = activity
         self.experience = experience
@@ -37,7 +39,7 @@ struct Entry: Identifiable, Codable {
     }
 }
 
-enum Experience: String, Codable, CaseIterable {
+enum Experience: String, Codable, Hashable, CaseIterable {
     case engaging = "Engaging"
     case basic = "Basic"
     case social = "Social"
@@ -47,20 +49,20 @@ enum Experience: String, Codable, CaseIterable {
     case pastime = "Pastime"
 }
 
-enum Mood: String, Codable, CaseIterable {
+enum Mood: String, Codable, Hashable, CaseIterable {
     case calmRelaxed = "Calm and relaxed"
     case happyGood = "Happy and in a good mood"
     case nervousAnxious = "Nervous and anxious"
     case depressed = "Depressed"
 }
 
-enum Condition: String, Codable, CaseIterable {
+enum Condition: String, Codable, Hashable, CaseIterable {
     case hyperarousal = "Hyperarousal"
     case tolerance = "Tolerance"
     case hypoarousal = "Hypoarousal"
 }
 
-enum Challenge: String, Codable, CaseIterable {
+enum Challenge: String, Codable, Hashable, CaseIterable {
     case notEnough = "Not Challenging Enough"
     case moderate = "Moderately Challenging"
     case tooMuch = "Too Challenging"
